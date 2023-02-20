@@ -1,6 +1,8 @@
 import requests
 import json
 from functools import wraps
+from ratelimit import limits, sleep_and_retry
+from datetime import timedelta
 
 
 class PocketException(Exception):
@@ -31,6 +33,7 @@ class RateLimitException(PocketException):
 class ServerMaintenanceException(PocketException):
     pass
 
+
 EXCEPTIONS = {
     400: InvalidQueryException,
     401: AuthException,
@@ -40,7 +43,6 @@ EXCEPTIONS = {
 
 
 def method_wrapper(fn):
-
     @wraps(fn)
     def wrapped(self, *args, **kwargs):
         arg_names = list(fn.__code__.co_varnames)
@@ -60,7 +62,6 @@ def method_wrapper(fn):
 
 
 def bulk_wrapper(fn):
-
     @wraps(fn)
     def wrapped(self, *args, **kwargs):
         arg_names = list(fn.__code__.co_varnames)
@@ -150,6 +151,8 @@ class Pocket(object):
         return r.json() or r.text, r.headers
 
     @classmethod
+    @sleep_and_retry
+    @limits(calls=320, period=timedelta(hours=1).total_seconds())
     def make_request(cls, url, payload, headers=None):
         return cls._make_request(url, payload, headers)
 
@@ -165,9 +168,9 @@ class Pocket(object):
 
     @method_wrapper
     def get(
-        self, state=None, favorite=None, tag=None, contentType=None,
-        sort=None, detailType=None, search=None, domain=None, since=None,
-        count=None, offset=None
+            self, state=None, favorite=None, tag=None, contentType=None,
+            sort=None, detailType=None, search=None, domain=None, since=None,
+            count=None, offset=None
     ):
         '''
         This method allows you to retrieve a user's list. It supports
@@ -188,8 +191,8 @@ class Pocket(object):
 
     @bulk_wrapper
     def bulk_add(
-        self, item_id, ref_id=None, tags=None, time=None, title=None,
-        url=None, wait=True
+            self, item_id, ref_id=None, tags=None, time=None, title=None,
+            url=None, wait=True
     ):
         '''
         Add a new item to the user's list
@@ -298,7 +301,7 @@ class Pocket(object):
 
     @classmethod
     def get_request_token(
-        cls, consumer_key, redirect_uri='http://example.com/', state=None
+            cls, consumer_key, redirect_uri='http://example.com/', state=None
     ):
         '''
         Returns the request token that can be used to fetch the access token
@@ -347,7 +350,7 @@ class Pocket(object):
 
     @classmethod
     def auth(
-        cls, consumer_key, redirect_uri='http://example.com/', state=None,
+            cls, consumer_key, redirect_uri='http://example.com/', state=None,
     ):
         '''
         This is a test method for verifying if oauth worked
@@ -356,9 +359,9 @@ class Pocket(object):
         '''
         code = cls.get_request_token(consumer_key, redirect_uri, state)
 
-        auth_url = 'https://getpocket.com/auth/authorize?request_token='\
-            '%s&redirect_uri=%s' % (code, redirect_uri)
-        raw_input(
+        auth_url = 'https://getpocket.com/auth/authorize?request_token=' \
+                   '%s&redirect_uri=%s' % (code, redirect_uri)
+        input(
             'Please open %s in your browser to authorize the app and '
             'press enter:' % auth_url
         )
