@@ -1,5 +1,5 @@
 certifi==2022.12.7
-chardet==3.0.4
+chardet==5.1.0
 coverage==3.7.1
 idna==2.7
 mock==1.0.1
